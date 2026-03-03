@@ -1,15 +1,16 @@
 package id.ac.ui.cs.advprog.eshop.service;
 
-import id.ac.ui.cs.advprog.eshop.exception.ProductNotFound;
 import id.ac.ui.cs.advprog.eshop.model.Product;
-import id.ac.ui.cs.advprog.eshop.model.ProductDto;
 import id.ac.ui.cs.advprog.eshop.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,13 +18,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
+    @Mock
     ProductRepository productRepository;
-
-    ProductServiceTest() {
-        productRepository = new ProductRepository();
-        productService = new ProductServiceImpl(productRepository);
-    }
-
+    @InjectMocks
     ProductServiceImpl productService;
     Random rng;
     final int seed = 0;
@@ -95,37 +92,38 @@ class ProductServiceTest {
 
         String name = "test";
         int quantity = 103;
-        ProductDto productDto = new ProductDto();
-        productDto.setProductId(product[1].getProductId());
+        Product productDto = new Product();
+        String id = product[1].getProductId();
         productDto.setProductName(name);
 
-        assertDoesNotThrow(() -> productService.edit(productDto));
+        assertDoesNotThrow(() -> productService.update(id, productDto));
         assertEquals("test", product[1].getProductName());
 
         productDto.setProductQuantity(quantity);
-        assertDoesNotThrow(() -> productService.edit(productDto));
+        assertDoesNotThrow(() -> productService.update(id, productDto));
         assertEquals(quantity, product[1].getProductQuantity());
 
         Product newProduct = new Product();
-        ProductDto newProductDto = new ProductDto();
-        newProductDto.setProductId(newProduct.getProductId());
+        Product newProductDto = new Product();
+        id = newProduct.getProductId();
 
-        assertThrows(ProductNotFound.class, () -> productService.edit(newProductDto));
+        String finalId = id;
+        assertThrows(NoSuchElementException.class, () -> productService.update(finalId, newProductDto));
     }
 
     @Test
     void testEditProductByIdFromEmptyRepository() {
         Product newProduct = new Product();
-        ProductDto newProductDto = new ProductDto();
-        newProductDto.setProductId(newProduct.getProductId());
-        assertThrows(ProductNotFound.class, () -> productService.edit(newProductDto));
+        Product newProductDto = new Product();
+        String id = newProduct.getProductId();
+        assertThrows(NoSuchElementException.class, () -> productService.update(id, newProductDto));
     }
 
     @Test
     void testRemoveProductByIdFromMoreThanOneProduct() {
         Product[] product = createNDummyProducts(3);
 
-        assertDoesNotThrow(() -> productService.removeById(product[0].getProductId()));
+        assertDoesNotThrow(() -> productService.deleteProductById(product[0].getProductId()));
 
         List<Product> productList = productService.findAll();
         assertEquals(2, productList.size());
@@ -133,7 +131,7 @@ class ProductServiceTest {
         assertTrue(productList.contains(product[1]));
         assertTrue(productList.contains(product[2]));
 
-        assertDoesNotThrow(() -> productService.removeById(product[1].getProductId()));
+        assertDoesNotThrow(() -> productService.deleteProductById(product[1].getProductId()));
 
         productList = productService.findAll();
         assertEquals(1, productList.size());
@@ -141,19 +139,19 @@ class ProductServiceTest {
         assertFalse(productList.contains(product[1]));
         assertTrue(productList.contains(product[2]));
 
-        assertDoesNotThrow(() -> productService.removeById(product[2].getProductId()));
+        assertDoesNotThrow(() -> productService.deleteProductById(product[2].getProductId()));
 
         productList = productService.findAll();
         assertEquals(0, productList.size());
 
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product[0].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product[1].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product[2].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productService.deleteProductById(product[0].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productService.deleteProductById(product[1].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productService.deleteProductById(product[2].getProductId()));
     }
 
     @Test
     void testRemoveProductByIdFromEmptyRepository() {
         Product product = new Product();
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product.getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productService.deleteProductById(product.getProductId()));
     }
 }

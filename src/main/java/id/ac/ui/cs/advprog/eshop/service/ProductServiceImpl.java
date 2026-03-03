@@ -1,10 +1,8 @@
 package id.ac.ui.cs.advprog.eshop.service;
 
-import id.ac.ui.cs.advprog.eshop.exception.ProductNotFound;
 import id.ac.ui.cs.advprog.eshop.model.Product;
-import id.ac.ui.cs.advprog.eshop.model.ProductDto;
 import id.ac.ui.cs.advprog.eshop.repository.ProductRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -12,10 +10,10 @@ import java.util.Iterator;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
-    private final ProductRepository productRepository;
+    @Autowired
+    private ProductRepository productRepository;
 
     @Override
     public Product create(Product product) {
@@ -24,14 +22,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Product edit(ProductDto productDto) throws ProductNotFound {
-        String id = productDto.getProductId();
+    public void update(String id, Product productDto) {
         String name = productDto.getProductName();
         int quantity = productDto.getProductQuantity();
         Product product = productRepository.findById(id);
         product.setProductName(name);
         product.setProductQuantity(quantity);
-        return product;
     }
 
     @Override
@@ -43,7 +39,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void removeById(String id) throws ProductNotFound {
+    public Product findById(String productId) {
+        return productRepository.findById(productId);
+    }
+
+    @Override
+    public void deleteProductById(String id) {
         productRepository.removeById(id);
     }
 
