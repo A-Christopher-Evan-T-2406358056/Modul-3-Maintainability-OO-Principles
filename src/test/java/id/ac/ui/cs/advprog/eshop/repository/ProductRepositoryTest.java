@@ -1,6 +1,5 @@
 package id.ac.ui.cs.advprog.eshop.repository;
 
-import id.ac.ui.cs.advprog.eshop.exception.ProductNotFound;
 import id.ac.ui.cs.advprog.eshop.model.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -84,7 +85,7 @@ class ProductRepositoryTest {
     }
 
     @Test
-    void testFindProductByIdFromMoreThanOneProduct() throws ProductNotFound {
+    void testFindProductByIdFromMoreThanOneProduct() {
         Product[] product = createNDummyProducts(3);
 
         assertDoesNotThrow(() -> productRepository.findById(product[0].getProductId()));
@@ -97,42 +98,84 @@ class ProductRepositoryTest {
 
         Product newProduct = new Product();
 
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(newProduct.getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(newProduct.getProductId()));
     }
 
     @Test
     void testFindProductByIdFromEmptyRepository() {
         Product product = new Product();
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product.getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product.getProductId()));
     }
 
     @Test
     void testRemoveProductByIdFromMoreThanOneProduct() {
         Product[] product = createNDummyProducts(3);
 
-        assertDoesNotThrow(() -> productRepository.removeById(product[0].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product[0].getProductId()));
+        assertDoesNotThrow(() -> productRepository.delete(product[0].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product[0].getProductId()));
         assertDoesNotThrow(() -> productRepository.findById(product[1].getProductId()));
         assertDoesNotThrow(() -> productRepository.findById(product[2].getProductId()));
 
-        assertDoesNotThrow(() -> productRepository.removeById(product[1].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product[0].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product[1].getProductId()));
+        assertDoesNotThrow(() -> productRepository.delete(product[1].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product[0].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product[1].getProductId()));
         assertDoesNotThrow(() -> productRepository.findById(product[2].getProductId()));
 
-        assertDoesNotThrow(() -> productRepository.removeById(product[2].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product[0].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product[1].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.findById(product[2].getProductId()));
+        assertDoesNotThrow(() -> productRepository.delete(product[2].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product[0].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product[1].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.findById(product[2].getProductId()));
 
-        assertThrows(ProductNotFound.class, () -> productRepository.removeById(product[0].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.removeById(product[1].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productRepository.removeById(product[2].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.delete(product[0].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.delete(product[1].getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.delete(product[2].getProductId()));
     }
 
     @Test
     void testRemoveProductByIdFromEmptyRepository() {
         Product product = new Product();
-        assertThrows(ProductNotFound.class, () -> productRepository.removeById(product.getProductId()));
+        assertThrows(NoSuchElementException.class, () -> productRepository.delete(product.getProductId()));
+    }
+
+    @Test
+    void testUpdateProductSuccessfully() {
+        Product product = new Product();
+        product.setProductId("eb558e9f-1c39-460e-8860-71af6af63bd6");
+        product.setProductName("Sampo Cap Bambang");
+        product.setProductQuantity(100);
+        productRepository.create(product);
+
+        Product updatedProduct = new Product();
+        updatedProduct.setProductId("eb558e9f-1c39-460e-8860-71af6af63bd6");
+        updatedProduct.setProductName("Sampo Cap Bango");
+        updatedProduct.setProductQuantity(200);
+
+        Optional<Product> result = productRepository.update(product.getProductId(), updatedProduct);
+
+        assertTrue(result.isPresent());
+        assertEquals("Sampo Cap Bango", result.get().getProductName());
+        assertEquals(200, result.get().getProductQuantity());
+
+        Product savedProduct = productRepository.findById(product.getProductId());
+        assertEquals("Sampo Cap Bango", savedProduct.getProductName());
+        assertEquals(200, savedProduct.getProductQuantity());
+    }
+
+    @Test
+    void testUpdateProductNotFound() {
+        Product product = new Product();
+        product.setProductId("eb558e9f-1c39-460e-8860-71af6af63bd6");
+        product.setProductName("Sampo Cap Bambang");
+        product.setProductQuantity(100);
+        productRepository.create(product);
+
+        Product updatedProduct = new Product();
+        updatedProduct.setProductId("invalid-id");
+        updatedProduct.setProductName("Sampo Cap Bango");
+        updatedProduct.setProductQuantity(200);
+
+        Optional<Product> result = productRepository.update(updatedProduct.getProductId(), updatedProduct);
+
+        assertFalse(result.isPresent());
     }
 }
