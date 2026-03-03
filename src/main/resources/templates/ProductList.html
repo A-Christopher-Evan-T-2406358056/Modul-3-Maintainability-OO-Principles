@@ -34,6 +34,11 @@
                         th:data-id="${product.productId}">
                     Delete
                 </button>
+                <button class="btn btn-danger btn-sm delete-btn"
+                        onclick="editProduct(this)"
+                        th:data-id="${product.productId}">
+                    Delete
+                </button>
             </td>
         </tr>
         </tbody>
@@ -49,114 +54,32 @@
 
 <script>
 
+    function deleteProduct(button) {
+        const id = button.dataset.id;
+        const formData = new URLSearchParams();
+        formData.append('productId', id);
 
-    $(document).ready(function () {
-
-        $('.editable').on('dblclick', function () {
-            const $cell = $(this);
-
-            if ($cell.hasClass('editing')) return;
-
-            var currentText = $cell.text();
-            $cell.addClass('editing');
-
-            // Replace text with an Input field
-            var $input = $('<input type="text" class="form-control">')
-                .val(currentText)
-                .css({
-                    'width': '100%',            // Fill the cell exactly
-                    'box-sizing': 'border-box', // Ensure padding is included in width
-                    'height': '100%',           // Match height
-                    'padding': '0 5px',         // Reduce padding to prevent height jump
-                    'margin': '0'
-                });
-
-            $cell.html($input);
-            $input.focus();
-
-            // 2. Handle Key Presses (Enter or Esc)
-            $input.on('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault(); // Stop newline
-                    saveData($cell, $(this).val(), currentText);
-                } else if (e.key === 'Escape') {
-                    cancelEdit($cell, currentText);
-                }
+        fetch('/product/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+        }).then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                console.error('Failed to delete the product.');
+            }
+        })
+            .catch(error => {
+                console.error('Error:', error);
             });
-
-            // 3. Handle Blur (Clicking away) -> Cancel as requested
-            $input.on('blur', function () {
-                cancelEdit($cell, currentText);
-            });
-        });
-
-
-        function saveData($cell, newValue, originalText) {
-
-            // remove event listener to prevent 'blur' from cancelling the save
-            $cell.find('input').off('blur');
-
-            // 1. Get the row to find ID and other data
-            var $row = $cell.closest('tr');
-            var productId = $row.data('id');
-
-            // 2. Construct the FULL object
-            // We must grab the OTHER cell's text, otherwise Quantity might become 0
-            var currentName = $row.find('td[data-field="productName"]').text();
-            var currentQty = $row.find('td[data-field="productQuantity"]').text();
-
-            // Determine which field we are currently updating
-            var field = $cell.data('field');
-            if (field === 'productName') currentName = newValue;
-            if (field === 'productQuantity') currentQty = newValue;
-
-            var productDto = {
-                productId: productId,
-                productName: currentName,
-                productQuantity: Number.parseInt(currentQty)
-            };
-
-            $.ajax({
-                url: '/product/api/edit',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(productDto),
-                success: function (response) {
-                    $cell.removeClass('editing');
-                    $cell.text(newValue);
-                },
-                error: function (xhr) {
-                    alert("Error updating: " + xhr.responseText);
-                    cancelEdit($cell, originalText); // Revert on error
-                }
-            });
-        }
-    });
-
-    function cancelEdit($cell, originalText) {
-        $cell.removeClass('editing');
-        $cell.html(originalText);
     }
 
-    async function deleteProduct(button) {
+    function editProduct(button) {
         const id = button.dataset.id;
-
-        const IdDto = {
-            id: id
-        };
-
-        $.ajax({
-            url: '/product/api/delete',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(IdDto),
-            success: function (response) {
-                button.parentElement.parentElement.remove();
-            },
-            error: function (xhr) {
-                alert("Error deleting: " + xhr.responseText);
-            }
-        });
+        window.location.href = `/product/edit/${id}`;
     }
 
 </script>

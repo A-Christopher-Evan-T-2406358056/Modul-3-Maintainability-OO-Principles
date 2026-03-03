@@ -1,59 +1,49 @@
 package id.ac.ui.cs.advprog.eshop.service;
 
-import id.ac.ui.cs.advprog.eshop.exception.ProductNotFound;
 import id.ac.ui.cs.advprog.eshop.model.Product;
-import id.ac.ui.cs.advprog.eshop.model.ProductDto;
 import id.ac.ui.cs.advprog.eshop.repository.ProductRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
+    @Mock
     ProductRepository productRepository;
 
-    ProductServiceTest() {
-        productRepository = new ProductRepository();
-        productService = new ProductServiceImpl(productRepository);
-    }
-
+    @InjectMocks
     ProductServiceImpl productService;
-    Random rng;
-    final int seed = 0;
-
-    @BeforeEach
-    void setUp() {
-        rng = new Random(seed);
-    }
 
     @Test
-    void testCreateAndFind() {
+    void testCreateProduct() {
         Product product = new Product();
         product.setProductId("eb558e9f-1c39-460e-8860-71af6af63bd6");
         product.setProductName("Sampo Cap Bambang");
         product.setProductQuantity(100);
-        productService.create(product);
+        when(productRepository.create(product)).thenReturn(product);
 
-        List<Product> productsList = productService.findAll();
-        assertEquals(1, productsList.size());
+        Product savedProduct = productService.create(product);
 
-        Product savedProduct = productsList.getFirst();
         assertEquals(product.getProductId(), savedProduct.getProductId());
-        assertEquals(product.getProductName(), savedProduct.getProductName());
-        assertEquals(product.getProductQuantity(), savedProduct.getProductQuantity());
+        verify(productRepository, times(1)).create(product);
     }
 
     @Test
     void testFindAllIfEmpty() {
+        when(productRepository.findAll()).thenReturn(Collections.emptyIterator());
+
         List<Product> productList = productService.findAll();
+
         assertTrue(productList.isEmpty());
+        verify(productRepository, times(1)).findAll();
     }
 
     @Test
@@ -61,99 +51,92 @@ class ProductServiceTest {
         Product product1 = new Product();
         product1.setProductId("eb558e9f-1c39-460e-8860-71af6af63bd6");
         product1.setProductName("Sampo Cap Bambang");
-        product1.setProductQuantity(100);
-        productService.create(product1);
 
         Product product2 = new Product();
         product2.setProductId("a0f9de46-90b1-437d-a0bf-d0821dde9096");
         product2.setProductName("Sampo Cap Usep");
-        product2.setProductQuantity(50);
-        productService.create(product2);
+
+        when(productRepository.findAll()).thenReturn(Arrays.asList(product1, product2).iterator());
 
         List<Product> productList = productService.findAll();
-        assertEquals(2, productList.size());
 
+        assertEquals(2, productList.size());
         assertEquals(product1.getProductId(), productList.getFirst().getProductId());
         assertEquals(product2.getProductId(), productList.getLast().getProductId());
-    }
-
-    private Product[] createNDummyProducts(int n) {
-        Product[] dummyProducts = new Product[n];
-        for (int i = 0; i < n; i++) {
-            Product product = new Product();
-            product.setProductName("Product" + i);
-            product.setProductQuantity(rng.nextInt(0, 1000000));
-            dummyProducts[i] = product;
-            productService.create(product);
-        }
-        return dummyProducts;
+        verify(productRepository, times(1)).findAll();
     }
 
     @Test
-    void testEditProductByIdFromMoreThanOneProduct() {
-        Product[] product = createNDummyProducts(3);
+    void testEditProductByIdSuccessfully() {
+        String id = "some-valid-id";
+        Product updatedProduct = new Product();
+        updatedProduct.setProductName("test");
+        updatedProduct.setProductQuantity(103);
 
-        String name = "test";
-        int quantity = 103;
-        ProductDto productDto = new ProductDto();
-        productDto.setProductId(product[1].getProductId());
-        productDto.setProductName(name);
+        when(productRepository.update(id, updatedProduct)).thenReturn(Optional.of(updatedProduct));
 
-        assertDoesNotThrow(() -> productService.edit(productDto));
-        assertEquals("test", product[1].getProductName());
+        assertDoesNotThrow(() -> productService.update(id, updatedProduct));
 
-        productDto.setProductQuantity(quantity);
-        assertDoesNotThrow(() -> productService.edit(productDto));
-        assertEquals(quantity, product[1].getProductQuantity());
-
-        Product newProduct = new Product();
-        ProductDto newProductDto = new ProductDto();
-        newProductDto.setProductId(newProduct.getProductId());
-
-        assertThrows(ProductNotFound.class, () -> productService.edit(newProductDto));
+        verify(productRepository, times(1)).update(id, updatedProduct);
     }
 
     @Test
-    void testEditProductByIdFromEmptyRepository() {
-        Product newProduct = new Product();
-        ProductDto newProductDto = new ProductDto();
-        newProductDto.setProductId(newProduct.getProductId());
-        assertThrows(ProductNotFound.class, () -> productService.edit(newProductDto));
+    void testEditProductByIdThrowsException() {
+        String invalidId = "invalid-id";
+        Product productDto = new Product();
+
+        when(productRepository.update(invalidId, productDto)).thenThrow(new NoSuchElementException());
+
+        assertThrows(NoSuchElementException.class, () -> productService.update(invalidId, productDto));
+        verify(productRepository, times(1)).update(invalidId, productDto);
     }
 
     @Test
-    void testRemoveProductByIdFromMoreThanOneProduct() {
-        Product[] product = createNDummyProducts(3);
+    void testRemoveProductByIdSuccessfully() {
+        String id = "some-valid-id";
 
-        assertDoesNotThrow(() -> productService.removeById(product[0].getProductId()));
+        doNothing().when(productRepository).delete(id);
 
-        List<Product> productList = productService.findAll();
-        assertEquals(2, productList.size());
-        assertFalse(productList.contains(product[0]));
-        assertTrue(productList.contains(product[1]));
-        assertTrue(productList.contains(product[2]));
+        assertDoesNotThrow(() -> productService.deleteProductById(id));
 
-        assertDoesNotThrow(() -> productService.removeById(product[1].getProductId()));
-
-        productList = productService.findAll();
-        assertEquals(1, productList.size());
-        assertFalse(productList.contains(product[0]));
-        assertFalse(productList.contains(product[1]));
-        assertTrue(productList.contains(product[2]));
-
-        assertDoesNotThrow(() -> productService.removeById(product[2].getProductId()));
-
-        productList = productService.findAll();
-        assertEquals(0, productList.size());
-
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product[0].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product[1].getProductId()));
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product[2].getProductId()));
+        verify(productRepository, times(1)).delete(id);
     }
 
     @Test
-    void testRemoveProductByIdFromEmptyRepository() {
+    void testRemoveProductByIdThrowsException() {
+        String invalidId = "invalid-id";
+
+        doThrow(new NoSuchElementException()).when(productRepository).delete(invalidId);
+
+        assertThrows(NoSuchElementException.class, () -> productService.deleteProductById(invalidId));
+        verify(productRepository, times(1)).delete(invalidId);
+    }
+
+    @Test
+    void testFindByIdSuccessfully() {
+        String id = "eb558e9f-1c39-460e-8860-71af6af63bd6";
         Product product = new Product();
-        assertThrows(ProductNotFound.class, () -> productService.removeById(product.getProductId()));
+        product.setProductId(id);
+        product.setProductName("Sampo Cap Bambang");
+        product.setProductQuantity(100);
+
+        when(productRepository.findById(id)).thenReturn(product);
+
+        Product foundProduct = productService.findById(id);
+
+        assertNotNull(foundProduct);
+        assertEquals(product.getProductId(), foundProduct.getProductId());
+        assertEquals(product.getProductName(), foundProduct.getProductName());
+        verify(productRepository, times(1)).findById(id);
+    }
+
+    @Test
+    void testFindByIdThrowsException() {
+        String invalidId = "invalid-id";
+
+        when(productRepository.findById(invalidId)).thenThrow(new NoSuchElementException());
+
+        assertThrows(NoSuchElementException.class, () -> productService.findById(invalidId));
+        verify(productRepository, times(1)).findById(invalidId);
     }
 }
