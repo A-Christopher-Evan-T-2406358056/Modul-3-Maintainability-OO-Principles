@@ -132,3 +132,84 @@ juga sama,
 dengan github workflow, proses menjalankan aplikasi untuk production dapat diotomasi. Sedangkan berbagai tools dapat
 digunakan untuk
 memudahkan deploymentnya (Dalam kasus ini saya menggunakan Koyeb)
+
+## Modul 3
+
+## Modul 3
+
+### SRP (Single Responsibility Principle)
+
+#### Penjelasan
+
+Prinsip SOLID pertama yang saya aplikasikan adalah SRP (*Single Responsibility Principle*). Pelanggaran prinsip ini
+terdapat pada fungsi `create()` di dalam `CarRepository` yang melakukan pengecekan dan pembuatan (generasi) UUID unik
+untuk objek `Car` yang baru. Tanggung jawab ini seharusnya berada pada kelas `Car` itu sendiri. Oleh karena itu, saya
+memindahkan logika pembuatan UUID ke dalam *constructor* kelas `Car`.
+
+Selain itu, terdapat pelanggaran SRP lainnya, yaitu kelas `CarController` disimpan di dalam berkas yang sama dengan
+`ProductController.java`. Hal ini membuat *separation of concerns* antara kedua kelas menjadi tidak jelas pada tingkat
+struktur berkas. Sebagai *good practice*, kedua kelas tersebut dipecah ke dalam berkasnya masing-masing.
+
+#### Advantage of Implementing
+
+Navigasi kode di dalam proyek menjadi lebih mudah karena struktur kode yang lebih rapi. Selain itu, proses *unit
+testing* juga menjadi lebih mudah karena bagian yang perlu diuji berukuran lebih atomik.
+
+#### Disadvantage of Not Implementing
+
+Navigasi kode cenderung jauh lebih sulit, di mana *developer* perlu membaca berkas file yang lebih panjang untuk mencari
+fitur spesifik. Penulisan *unit test* juga menjadi jauh lebih sulit untuk kelas yang memikul terlalu banyak tanggung
+jawab.
+
+### LSP (Liskov Substitution Principle)
+
+#### Penjelasan
+
+Prinsip SOLID kedua yang saya aplikasikan adalah LSP (*Liskov Substitution Principle*). Pelanggarannya terlihat pada
+`CarController` yang melakukan *inherit* (pewarisan) dari `ProductController`. LSP menyatakan bahwa sebuah *subclass*
+harus bisa menggantikan *superclass*-nya. Dalam kasus ini, `CarController` tidak dapat menggantikan `ProductController`
+karena *endpoint* dan *service* yang digunakan sudah berbeda.
+
+Alasan lainnya adalah secara konseptual, `CarController` bukanlah *subtype* dari `ProductController`. Walaupun bisa
+diargumentasikan bahwa `Car` adalah tipe dari `Product`, dalam konteks ini, *controller* dari keduanya jelas membutuhkan
+implementasi yang berbeda. Sebagai perbaikannya, saya menghilangkan *keyword* `extends ProductController` pada kelas
+`CarController`.
+
+#### Advantage of Implementing
+
+Perilaku aplikasi menjadi lebih dapat diprediksi dan stabil karena *subclass* dijamin dapat menggantikan *superclass*
+tanpa merusak logika program. Hierarki kelas yang dibangun menjadi lebih masuk akal secara desain, dapat di-*reuse*
+dengan aman, dan meminimalisasi kebutuhan penyesuaian kode di masa depan.
+
+#### Disadvantage of Not Implementing
+
+Aplikasi menjadi rentan terhadap *bug* atau *runtime error* yang tidak terduga ketika objek *subclass* dipanggil di
+tempat yang mengharapkan *superclass*. Pengembang sering kali harus menambahkan pengecekan tipe secara manual (seperti
+penggunaan `instanceof`) atau *handling* khusus yang membuat kode sulit di-*maintain*.
+
+### DIP (Dependency Inversion Principle)
+
+#### Penjelasan
+
+Prinsip SOLID ketiga yang saya aplikasikan adalah DIP (*Dependency Inversion Principle*). Pelanggaran prinsip ini
+terlihat pada `CarController` yang melakukan *injection* pada *concrete class* `CarServiceImpl`, bukan pada *interface*
+-nya, yakni `CarService`.
+
+Hal ini membuat *unit testing* menjadi lebih sulit dan dapat menyebabkan dampak perubahan kode pada `CarServiceImpl`
+bocor ke `CarController`. Perbaikannya cukup sederhana, yaitu dengan mengganti tipe *field* yang di-`@Autowired` menjadi
+`CarService`. Spring Boot akan secara otomatis mencari dan meng-*inject* kelas yang mengimplementasikan *interface*
+tersebut.
+
+#### Advantage of Implementing
+
+Ketergantungan antar komponen menjadi lebih longgar (*loosely coupled*), sehingga *controller* tidak terikat pada detail
+implementasi spesifik dari *service*. Proses *unit testing* menjadi jauh lebih mudah dan terisolasi karena *interface*
+dapat di-*mock* tanpa hambatan. Selain itu, pergantian atau penambahan implementasi *service* di masa depan tidak akan
+memaksa kita untuk mengubah kode pada *controller*.
+
+#### Disadvantage of Not Implementing
+
+Komponen sistem menjadi sangat terikat satu sama lain (*tightly coupled*), sehingga setiap perubahan pada kelas konkret
+berisiko merusak atau memengaruhi logika di kelas tingkat tinggi yang menggunakannya. Pengujian kode (*testing*) menjadi
+kaku dan sulit karena sistem dipaksa bergantung pada implementasi asli yang mungkin membutuhkan *setup* yang rumit,
+sehingga menurunkan fleksibilitas dan skalabilitas aplikasi secara keseluruhan.
